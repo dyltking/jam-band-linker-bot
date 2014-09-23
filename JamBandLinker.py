@@ -1,17 +1,9 @@
 import praw
-from praw.helpers import flatten_tree
 import re
+import httplib2
 
-r = praw.Reddit('JamBandLinkerBot 1.0 by /u/DTKing')
-subreddit = r.get_subreddit('grateful_dead')
-submissionGenerator = subreddit.get_new(limit=20)
 
 def fixStringLengths(toAppend):
-	
-
-	"""if ord(toAppend[0][0]) < 48 or ord(toAppend[0][0]) > 57:
-		toAppend[0] = toAppend[0][1:] #remove the offending char we grabbed """
-	
 	if toAppend[0][0] == '0': #need to remove the 0 from the month
 		toAppend[0].lstrip('0')
 
@@ -23,19 +15,21 @@ def fixStringLengths(toAppend):
 
 	return toAppend
 
+
+r = praw.Reddit('JamBandLinkerBot 1.0 by /u/DTKing')
+subreddit = r.get_subreddit('grateful_dead')
+submissionGenerator = subreddit.get_new(limit=5)
+
 alreadyDone = set() #set to track if comment has already been analyzed
 myComments = []
-print "here!!!!!!"
-#for submission in submissions:
-#	flat_comments = praw.helpers.flatten_tree(submission.comments)
+#Create a large list of comments
 for submission in submissionGenerator:
 	for comment in submission.comments:
 		myComments.append(comment)
 i = 1
-print "here"
 print "Number of comments parsed: " + str(len(myComments))
 regexString = re.compile('\d{1,3}[-./]\d{1,2}[-./]\d{2,4}')
-print "Comments flattened and regex string compiled"
+
 for comment in myComments:
 	search = regexString.search(comment.body) #search will contain the found date string\
 	if search is not None and comment.id not in alreadyDone: #check for a date-like string that's new
@@ -55,17 +49,26 @@ for comment in myComments:
 				continue
 		#toAppend[0] = toAppend[0].lstrip(' ')
 		fixStringLengths(toAppend);
-		
+		year = toAppend[2]
+		month = toAppend[0]
+		day = toAppend[1]
+		urlString = 'http://www.relisten.net/grateful-dead/' + year + '/' + month + '/' + day
+
+		requestString = "http://relisten.net/api/artists/grateful-dead/years/" + year + "/shows/" + year + "-" + month + "-" + day
+		h = httplib2.Http()
+		resp, content = h.request(requestString, 'HEAD')
+		#print resp
+		if int(resp['status']) >= 400:
+			print "BAD DATE " + resp['status']
+			continue
 		''' comment.reply('Here\s a link to the mentioned show!\n' + 
-					  '[' + search + ']' + '('
-			          'www.relisten.net/grateful-dead/' + 
-			           toAppend[2] + '/' toAppend[0] + '/' toAppend[1])	+ ')'	'''
+					  '[' + search + ']' + '(' + urlString + ')'
+			          	'''
 		print comment.body
 		alreadyDone.add(comment.id)
 
 		print 'Here\'s a link to the mentioned show!' 
-		print '[' + search.group() + ']' + '(' + 'http://www.relisten.net/grateful-dead/' 
-		print toAppend[2] + '/' + toAppend[0] + '/' + toAppend[1] + ')'
+		print '[' + search.group() + ']' + '(' + 'http://www.relisten.net/grateful-dead/' + year + '/' + month + '/' + day + ')'
 	elif search is None:
 		#print comment.body
 		print "Search is none" + str(i)

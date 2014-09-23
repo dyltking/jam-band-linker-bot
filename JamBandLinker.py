@@ -17,7 +17,7 @@ def fixStringLengths(toAppend):
 
 
 r = praw.Reddit('JamBandLinkerBot 1.0 by /u/DTKing')
-subreddit = r.get_subreddit('grateful_dead')
+subreddit = r.get_subreddit('gdbot_test')
 submissionGenerator = subreddit.get_new(limit=5)
 
 alreadyDone = set() #set to track if comment has already been analyzed
@@ -38,26 +38,36 @@ for comment in myComments:
 		for string in toAppend:
 			print string
 
-		if len(toAppend[0]) == 3: #we got a bad string
+		if len(toAppend[0]) == 3: #we got a bad string :'(
 			continue
 
 		if len(toAppend[0]) == 2:
 			if ord(toAppend[0][0]) > 49 or ord(toAppend[0][0]) < 48: #first months digit can only be 0,1
 				continue
 			if ord(toAppend[0][1]) > 50 or ord(toAppend[0][1]) < 48: #second months digit can only be 0,1,2
-				#print comment.body
 				continue
-		#toAppend[0] = toAppend[0].lstrip(' ')
+
 		fixStringLengths(toAppend);
 		year = toAppend[2]
 		month = toAppend[0]
 		day = toAppend[1]
 		urlString = 'http://www.relisten.net/grateful-dead/' + year + '/' + month + '/' + day
 
-		requestString = "http://relisten.net/api/artists/grateful-dead/years/" + year + "/shows/" + year + "-" + month + "-" + day
+		requestString = "http://relisten.net/api/artists/grateful-dead/years/" + year + "/shows/" + year + "-"
+		
+		if len(month) == 1: #need to add a 0 onto the month for the requestString if it's not there already
+			requestString = requestString + '0' + month
+		else:
+			requestString = requestString + month
+		
+		if len(day) == 1: #and the same for the day
+			requestString = requestString + '-' + '0' + day
+		else:
+			requestSTring = requestString + '-' + day
+
 		h = httplib2.Http()
 		resp, content = h.request(requestString, 'HEAD')
-		#print resp
+	
 		if int(resp['status']) >= 400:
 			print "BAD DATE " + resp['status']
 			continue

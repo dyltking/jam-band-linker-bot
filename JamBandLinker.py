@@ -1,6 +1,7 @@
 import praw
 import re
 import httplib2
+import sys
 
 ASCII_ZERO = 48
 ASCII_ONE = 49
@@ -21,8 +22,7 @@ def isHttpValid(day, month, year):
 
 	h = httplib2.Http()
 	resp, content = h.request(requestString, 'HEAD')
-	print requestString 
-	
+		
 	if int(resp['status']) >= 400:
 		print "BAD DATE " + resp['status'] + '\n'
 		return False
@@ -30,9 +30,15 @@ def isHttpValid(day, month, year):
 		return True
 
 
+if len(sys.argv) < 2: #no command line input
+	print "You need to specify a subreddit!"
+	sys.exit()
+elif len(sys.argv) >= 2: #a subreddit was specified
+	subredditToCrawl = sys.argv[1]
+
 r = praw.Reddit('JamBandLinkerBot 1.0 by /u/DTKing')
-subreddit = r.get_subreddit('gdbot_test')
-submissionGenerator = subreddit.get_new(limit=5)
+subreddit = r.get_subreddit(subredditToCrawl)
+submissionGenerator = subreddit.get_new(limit = 10)
 
 alreadyDone = set() #set to track if comment has already been analyzed
 

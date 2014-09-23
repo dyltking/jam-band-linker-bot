@@ -16,6 +16,28 @@ def fixStringLengths(toAppend):
 	return toAppend
 
 
+def httpValidation(day, month, year):
+	requestString = "http://relisten.net/api/artists/grateful-dead/years/" + year + "/shows/" + year + "-"
+		
+	if len(month) == 1: #need to add a 0 onto the month for the requestString if it's not there already
+		requestString = requestString + '0' + month
+	else:
+		requestString = requestString + month
+	
+	if len(day) == 1: #and the same for the day
+		requestString = requestString + '-' + '0' + day
+	else:
+		requestSTring = requestString + '-' + day
+
+	h = httplib2.Http()
+	resp, content = h.request(requestString, 'HEAD')
+
+	if int(resp['status']) >= 400:
+		return False
+	else:
+		return True
+
+
 r = praw.Reddit('JamBandLinkerBot 1.0 by /u/DTKing')
 subreddit = r.get_subreddit('gdbot_test')
 submissionGenerator = subreddit.get_new(limit=5)
@@ -53,38 +75,24 @@ for comment in myComments:
 		day = toAppend[1]
 		urlString = 'http://www.relisten.net/grateful-dead/' + year + '/' + month + '/' + day
 
-		requestString = "http://relisten.net/api/artists/grateful-dead/years/" + year + "/shows/" + year + "-"
-		
-		if len(month) == 1: #need to add a 0 onto the month for the requestString if it's not there already
-			requestString = requestString + '0' + month
-		else:
-			requestString = requestString + month
-		
-		if len(day) == 1: #and the same for the day
-			requestString = requestString + '-' + '0' + day
-		else:
-			requestSTring = requestString + '-' + day
-
-		h = httplib2.Http()
-		resp, content = h.request(requestString, 'HEAD')
-	
-		if int(resp['status']) >= 400:
+		if not httpValidation(day, month, year):
 			print "BAD DATE " + resp['status']
 			continue
-		''' comment.reply('Here\s a link to the mentioned show!\n' + 
-					  '[' + search + ']' + '(' + urlString + ')'
-			          	'''
+		
 		print comment.body
 		alreadyDone.add(comment.id)
 
 		print 'Here\'s a link to the mentioned show!' 
 		print '[' + search.group() + ']' + '(' + 'http://www.relisten.net/grateful-dead/' + year + '/' + month + '/' + day + ')'
+	
 	elif search is None:
 		#print comment.body
 		print "Search is none" + str(i)
 		i = i+1
+	
 	elif comment.id in alreadyDone:
 		print "Comment already here"
+	
 	else:
 		print "confused" 
 

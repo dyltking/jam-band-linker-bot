@@ -2,10 +2,13 @@ import praw
 import re
 import httplib2
 import sys
+import time
 
 ASCII_ZERO = 48
 ASCII_ONE = 49
 ASCII_TWO = 50
+WAIT = 600
+#This is how many seconds to wait between attempting to comment again
 
 def isHttpValid(day, month, year):
 	requestString = "http://relisten.net/api/artists/grateful-dead/years/" + year + "/shows/" + year + "-"
@@ -29,6 +32,13 @@ def isHttpValid(day, month, year):
 	else:
 		return True
 
+def repliedAlready(comment):
+	for reply in comment.replies:
+		if str(reply.author) == 'JamBandLinkerBot': #If I've already responded to this comment, skip it
+			print "Skipping this comment, I already replied to it."
+			return True
+	return False
+
 
 
 if len(sys.argv) < 2: #no command line input
@@ -40,7 +50,7 @@ elif len(sys.argv) >= 2: #a subreddit was specified
 r = praw.Reddit('JamBandLinkerBot 1.0 by /u/DTKing')
 r.login() #login using local praw.ini config
 subreddit = r.get_subreddit(subredditToCrawl)
-submissionGenerator = subreddit.get_new(limit = 10)
+submissionGenerator = subreddit.get_new(limit = 20)
 
 alreadyDone = set() #set to track if comment has already been analyzed
 
@@ -54,9 +64,9 @@ print "Number of comments parsed: " + str(len(myComments)) + '\n'
 regexString = re.compile('\d{1,3}[-./]\d{1,2}[-./]\d{2,4}')
 
 for comment in myComments:
-	if comment.id in alreadyDone: #check this early to skip unnecessary regex searching
+	if comment.id in alreadyDone or repliedAlready(comment): #check these early to skip unnecessary regex searching
 		continue
-	
+
 	datesToPost = []
 	linksToPost = []
 	
@@ -113,17 +123,25 @@ for comment in myComments:
 		print "confused" 
 
 	#Manage printing of links
-	if len(linksToPost) == 1:
-		comment.reply( 'Here\'s a link to the mentioned show!\n' + 
-	    '[' + datesToPost[0] + ']' + '(' + linksToPost[0] + ')' + '\n')
-	elif len(linksToPost) > 1:
-		i = 0
-		print 'Here are links to the mentioned shows!'
+	if len(linksToPost) == 1: #Only one valid date in original comment
+		comment.reply( 'Here\'s a link to the mentioned show!\n\n' + 
+		'[' + datesToPost[0] + ']' + '(' + linksToPost[0] + ')')
+		print "Replied to a comment."
+		print "Running again in " + str(WAIT/60) + " minutes!"
+		time.sleep(WAIT) 	#Wait 10 minutes to add another comment because of rate limit
+
+	elif len(linksToPost) > 1: #Multiple valid dates in original comment
+		index = 0
+		commentString = 'Here are links to the mentioned shows!' #Have to build this string
 		for link in linksToPost:
-			print '[' + datesToPost[i] + ']' + '(' + link + ')'
-			i += 1
-		print ''
+			commentString += '\n\n[' + datesToPost[index] + ']' + '(' + link + ')'
+			index += 1
+		comment.reply( commentString )
+		print "Replied to a comment."
+		print "Running again in " + str(WAIT/60) + " minutes!"
+		time.sleep(WAIT) 	#Wait 10 minutes to add another comment because of rate limit
+
 
 	alreadyDone.add(comment.id) #add this comment to our list of read comments
-
 	
+print "Finished execution of script!"	

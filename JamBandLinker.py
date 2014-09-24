@@ -33,10 +33,13 @@ def isHttpValid(day, month, year):
 		return True
 
 def repliedAlready(comment):
+	if str(comment.author) == 'JamBandLinkerBot': #Don't reply to myself!
+		return True
+
 	for reply in comment.replies:
 		if str(reply.author) == 'JamBandLinkerBot': #If I've already responded to this comment, skip it
-			print "Skipping this comment, I already replied to it."
 			return True
+
 	return False
 
 
@@ -57,7 +60,9 @@ alreadyDone = set() #set to track if comment has already been analyzed
 #Create a large list of comments
 myComments = []
 for submission in submissionGenerator:
-	for comment in submission.comments:
+	submission.replace_more_comments(None, 1) #Replace MoreComments objects with Comment objects
+	allComments = praw.helpers.flatten_tree(submission.comments) #flatten the comment tree into one list for easy iteration
+	for comment in allComments:
 		myComments.append(comment)
 i = 1
 print "Number of comments parsed: " + str(len(myComments)) + '\n'
@@ -65,6 +70,9 @@ regexString = re.compile('\d{1,3}[-./]\d{1,2}[-./]\d{2,4}')
 
 for comment in myComments:
 	if comment.id in alreadyDone or repliedAlready(comment): #check these early to skip unnecessary regex searching
+		if repliedAlready(comment):
+			print "Skipping this comment, I already replied to it or it's my comment."
+			print comment.body
 		continue
 
 	datesToPost = []
@@ -128,7 +136,10 @@ for comment in myComments:
 		'[' + datesToPost[0] + ']' + '(' + linksToPost[0] + ')')
 		print "Replied to a comment."
 		print "Running again in " + str(WAIT/60) + " minutes!"
-		time.sleep(WAIT) 	#Wait 10 minutes to add another comment because of rate limit
+
+		if (len(alreadyDone)+1) < len(myComments):
+			time.sleep(WAIT) 	#Wait 10 minutes to add another comment because of rate limit
+
 
 	elif len(linksToPost) > 1: #Multiple valid dates in original comment
 		index = 0
@@ -139,9 +150,12 @@ for comment in myComments:
 		comment.reply( commentString )
 		print "Replied to a comment."
 		print "Running again in " + str(WAIT/60) + " minutes!"
-		time.sleep(WAIT) 	#Wait 10 minutes to add another comment because of rate limit
 
+		if (len(alreadyDone)+1) < len(myComments):
+			time.sleep(WAIT) 	#Wait 10 minutes to add another comment because of rate limit
 
 	alreadyDone.add(comment.id) #add this comment to our list of read comments
+
+
 	
 print "Finished execution of script!"	

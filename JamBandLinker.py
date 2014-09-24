@@ -7,9 +7,8 @@ import time
 ASCII_ZERO = 48
 ASCII_ONE = 49
 ASCII_TWO = 50
-WAIT = 600
-#This is how many seconds to wait between attempting to comment again
 
+#Ping the relisten.net api to see if the prospective URL is valid (effectively, checks to see if the band played this date)
 def isHttpValid(day, month, year):
 	requestString = "http://relisten.net/api/artists/grateful-dead/years/" + year + "/shows/" + year + "-"
 		
@@ -32,6 +31,7 @@ def isHttpValid(day, month, year):
 	else:
 		return True
 
+#Check if a comment was made by this bot, or has already been replied to by this bot
 def repliedAlready(comment):
 	if str(comment.author) == 'JamBandLinkerBot': #Don't reply to myself!
 		return True
@@ -43,6 +43,37 @@ def repliedAlready(comment):
 	return False
 
 
+#Manage posting of comments, including rate limit logic
+def postReplies(linksToPost, datesToPost):
+	if len(linksToPost) == 1: #Only one valid date in original comment
+		try:
+			comment.reply( 'Here\'s a link to the mentioned show!\n\n' + 
+			'[' + datesToPost[0] + ']' + '(' + linksToPost[0] + ')')
+			print "Replied to a comment for date " + datesToPost[0] + "."
+
+		except praw.errors.RateLimitExceeded as error:
+			print("RateLimit: {:f} seconds".format(error.sleep_time))
+			time.sleep(error.sleep_time)
+			comment.reply( 'Here\'s a link to the mentioned show!\n\n' + #comment after having waited for Rate Limit to expire
+			'[' + datesToPost[0] + ']' + '(' + linksToPost[0] + ')')
+			print "Replied to a comment for date " + datesToPost[0] + "."
+
+	elif len(linksToPost) > 1: #Multiple valid dates in original comment
+		index = 0
+		commentString = 'Here are links to the mentioned shows!' #Have to build this string
+		for link in linksToPost:
+			commentString += '\n\n[' + datesToPost[index] + ']' + '(' + link + ')'
+			index += 1
+		try:
+			comment.reply( commentString )
+			print "Replied to a multidate comment."
+
+		except praw.errors.RateLimitExceeded as error:
+			print("RateLimit: {:f} seconds".format(error.sleep_time))
+			time.sleep(error.sleep_time)
+			comment.reply( commentString ) #comment after having waited for Rate Limit to expire
+			print "Replied to a multidate comment."
+
 
 if len(sys.argv) < 2: #no command line input
 	print "You need to specify a subreddit!"
@@ -53,9 +84,9 @@ elif len(sys.argv) >= 2: #a subreddit was specified
 r = praw.Reddit('JamBandLinkerBot 1.0 by /u/DTKing')
 r.login() #login using local praw.ini config
 subreddit = r.get_subreddit(subredditToCrawl)
-submissionGenerator = subreddit.get_new(limit = 20)
+submissionGenerator = subreddit.get_new(limit = 25)
 
-alreadyDone = set() #set to track if comment has already been analyzed
+alreadyDone = set() #set to track if comment has already been analyzed, probably superfluous
 
 #Create a large list of comments
 myComments = []
@@ -70,9 +101,7 @@ regexString = re.compile('\d{1,3}[-./]\d{1,2}[-./]\d{2,4}')
 
 for comment in myComments:
 	if comment.id in alreadyDone or repliedAlready(comment): #check these early to skip unnecessary regex searching
-		if repliedAlready(comment):
-			print "Skipping this comment, I already replied to it or it's my comment."
-			print comment.body
+		print "Skipping this comment, I already replied to it or it's my comment."
 		continue
 
 	datesToPost = []
@@ -114,13 +143,11 @@ for comment in myComments:
 			if not isHttpValid(day, month, year):
 				continue
 
-			#print comment.body
 			urlString = 'http://www.relisten.net/grateful-dead/' + year + '/' + month + '/' + day
 			linksToPost.append(urlString) #add this string into our list of links to post
 			datesToPost.append(search.group())
 
 	elif searchIterator is None:
-		#print comment.body
 		print "Search is none" + str(i) + '\n'
 		i = i+1
 	
@@ -128,34 +155,10 @@ for comment in myComments:
 		print "Comment already here"
 	
 	else:
-		print "confused" 
+		print "?!?!?!??!?!?!?!" 
 
-	#Manage printing of links
-	if len(linksToPost) == 1: #Only one valid date in original comment
-		comment.reply( 'Here\'s a link to the mentioned show!\n\n' + 
-		'[' + datesToPost[0] + ']' + '(' + linksToPost[0] + ')')
-		print "Replied to a comment."
-		print "Running again in " + str(WAIT/60) + " minutes!"
-
-		if (len(alreadyDone)+1) < len(myComments):
-			time.sleep(WAIT) 	#Wait 10 minutes to add another comment because of rate limit
-
-
-	elif len(linksToPost) > 1: #Multiple valid dates in original comment
-		index = 0
-		commentString = 'Here are links to the mentioned shows!' #Have to build this string
-		for link in linksToPost:
-			commentString += '\n\n[' + datesToPost[index] + ']' + '(' + link + ')'
-			index += 1
-		comment.reply( commentString )
-		print "Replied to a comment."
-		print "Running again in " + str(WAIT/60) + " minutes!"
-
-		if (len(alreadyDone)+1) < len(myComments):
-			time.sleep(WAIT) 	#Wait 10 minutes to add another comment because of rate limit
+	postReplies(linksToPost, datesToPost) #make posts!
 
 	alreadyDone.add(comment.id) #add this comment to our list of read comments
-
-
 	
 print "Finished execution of script!"	

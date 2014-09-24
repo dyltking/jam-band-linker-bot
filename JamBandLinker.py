@@ -38,6 +38,7 @@ elif len(sys.argv) >= 2: #a subreddit was specified
 	subredditToCrawl = sys.argv[1]
 
 r = praw.Reddit('JamBandLinkerBot 1.0 by /u/DTKing')
+r.login() #login using local praw.ini config
 subreddit = r.get_subreddit(subredditToCrawl)
 submissionGenerator = subreddit.get_new(limit = 10)
 
@@ -113,8 +114,8 @@ for comment in myComments:
 
 	#Manage printing of links
 	if len(linksToPost) == 1:
-		print 'Here\'s a link to the mentioned show!' 
-		print '[' + datesToPost[0] + ']' + '(' + linksToPost[0] + ')' + '\n'
+		comment.reply( 'Here\'s a link to the mentioned show!\n' + 
+	    '[' + datesToPost[0] + ']' + '(' + linksToPost[0] + ')' + '\n')
 	elif len(linksToPost) > 1:
 		i = 0
 		print 'Here are links to the mentioned shows!'

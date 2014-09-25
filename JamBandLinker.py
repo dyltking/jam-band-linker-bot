@@ -7,6 +7,7 @@ import time
 ASCII_ZERO = 48
 ASCII_ONE = 49
 ASCII_TWO = 50
+ASCII_THREE = 51
 
 
 #Ping the relisten.net api to see if the prospective URL is valid (effectively, checks to see if the band played this date)
@@ -85,20 +86,6 @@ def postReplies(comment, commentIndex, linksToPost, datesToPost):
 	return 0
 
 
-def validateStrings(day, month, year):
-	if len(month) == 3: #we got a bad string :'(
-		return False
-
-	if len(month) == 2: #if the months has two digits, validate
-		if ord(month[0]) > ASCII_ONE or ord(month[0]) < ASCII_ZERO: #first months digit can only be 0,1
-			return False
-		if ord(month[0]) == ASCII_ONE: #if first month's digit is 1	
-			if ord(month[1]) > ASCII_TWO or ord(month[1]) < ASCII_ZERO: #second months digit can only be 0,1,2
-				return False
-
-	return True #All good!
-
-
 #Script entry point
 def jamBandLinker(subredditToCrawl, postLimit):
 	r = praw.Reddit('JamBandLinkerBot 1.0 by /u/DTKing')
@@ -123,7 +110,7 @@ def jamBandLinker(subredditToCrawl, postLimit):
 	
 	print "Done gathering comments!"
 	print "Number of comments parsed: " + str(len(myComments)) + '\n'
-	regexString = re.compile('\d{1,3}[-./]\d{1,2}[-./]\d{2,4}')
+	regexString = re.compile('\d{1,3}[-./]\d{1,2}[-./]\d{2,4}') #Look for a string that resembles a date
 	commentIndex = 0
 	postCounter = 0
 
@@ -134,6 +121,7 @@ def jamBandLinker(subredditToCrawl, postLimit):
 			print "Comment #" + str(commentIndex) + ": Skipping this comment, I already replied to it or it's my comment."
 			continue
 
+		#We'll use these to gather any valid dates (and their corresponding links) that we need to reply to
 		datesToPost = []
 		linksToPost = []
 		
@@ -147,11 +135,6 @@ def jamBandLinker(subredditToCrawl, postLimit):
 				year = toAppend[2]
 				month = toAppend[0]
 				day = toAppend[1]
-				
-				#Check if strings are valid calendar dates
-				if not validateStrings(day, month, year):
-					print "Comment #" + str(commentIndex) + ": Invalid string lengths or values."
-					continue
 
 				#Fix string lengths for use in url creation
 				if month[0] == '0': #need to remove the 0 from the month

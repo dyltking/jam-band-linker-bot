@@ -99,12 +99,12 @@ def validateStrings(day, month, year):
 	return True #All good!
 
 
-#Script starts here
-def jamBandLinker(subredditToCrawl):
+#Script entry point
+def jamBandLinker(subredditToCrawl, postLimit):
 	r = praw.Reddit('JamBandLinkerBot 1.0 by /u/DTKing')
 	r.login() #login using local praw.ini config
 	subreddit = r.get_subreddit(subredditToCrawl)
-	submissionGenerator = subreddit.get_new(limit = 25)
+	submissionGenerator = subreddit.get_new(limit = int(postLimit))
 
 	alreadyDone = set() #set to track if comment has already been analyzed, probably superfluous
 
@@ -187,7 +187,7 @@ def jamBandLinker(subredditToCrawl):
 
 	#Print how many comments we posted and indicate that we finished running the script
 	print ''
-	
+
 	if postCounter == 0:
 		print "Posted no new comments."
 	elif postCounter == 1:
@@ -197,12 +197,19 @@ def jamBandLinker(subredditToCrawl):
 	
 	print "Finished execution of script!"	
 
+
+#Parse and handle command line input, call the script with correct arguments
 def main():
 	if len(sys.argv) < 2: #no command line input
 		print "You need to specify a subreddit!"
-	elif len(sys.argv) >= 2: #a subreddit was specified
+	elif len(sys.argv) == 2: #subreddit specified, no post limit specified. 
 		subredditToCrawl = sys.argv[1]
-		jamBandLinker(subredditToCrawl) #run the script!
+		jamBandLinker(subredditToCrawl, 0) #setting limit to 0 will use the account's default (25 for unauthenticated users)
+	elif len(sys.argv) >= 3: #a subreddit and post limit was specified
+		subredditToCrawl = sys.argv[1]
+		postLimit = sys.argv[2]
+		jamBandLinker(subredditToCrawl, postLimit) #run the script!
+
 
 if __name__ == '__main__':
 	sys.exit(main())

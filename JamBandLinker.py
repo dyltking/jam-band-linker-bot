@@ -4,11 +4,6 @@ import httplib2
 import sys
 import time
 
-ASCII_ZERO = 48
-ASCII_ONE = 49
-ASCII_TWO = 50
-ASCII_THREE = 51
-
 
 #Ping the relisten.net api to see if the prospective URL is valid (effectively, checks to see if the band played this date)
 def isHttpValid(day, month, year):
@@ -118,7 +113,7 @@ def jamBandLinker(subredditToCrawl, postLimit):
 	for comment in myComments:
 		commentIndex += 1
 		if comment.id in alreadyDone or repliedAlready(comment): #check these early to skip unnecessary regex searching
-			print "Comment #" + str(commentIndex) + ": Skipping this comment, I already replied to it or it's my comment."
+			print "Comment #" + str(commentIndex) + ": Already replied to this, or it's my own comment."
 			continue
 
 		#We'll use these to gather any valid dates (and their corresponding links) that we need to reply to

@@ -46,13 +46,15 @@ def postReplies(comment, commentIndex, linksToPost, datesToPost):
 	if len(linksToPost) == 1: #Only one valid date in original comment
 		try:
 			comment.reply( 'Here\'s a link to the mentioned show!\n\n' + 
-			'[' + datesToPost[0] + ']' + '(' + linksToPost[0] + ')')
+			'[' + datesToPost[0] + ']' + '(' + linksToPost[0] + ')' + '\n\n^^This ^^bot ^^was ^^made ^^by ^^/u/DTKing. ' + 
+      '^^Please ^^message ^^him ^^with ^^any ^^questions, ^^comments, ^^or ^^concerns ^^you ^^may ^^have.')
 
 		except praw.errors.RateLimitExceeded as error: #ran into a rate limit, wait the specified time then reply
 			print("RateLimit: {:f} seconds".format(error.sleep_time))
 			time.sleep(error.sleep_time)
 			comment.reply( 'Here\'s a link to the mentioned show!\n\n' + #comment after having waited for Rate Limit to expire
-			'[' + datesToPost[0] + ']' + '(' + linksToPost[0] + ')')
+			'[' + datesToPost[0] + ']' + '(' + linksToPost[0] + ')' + '\n\n^^This ^^bot ^^was ^^made ^^by ^^/u/DTKing. ' + 
+      '^^Please ^^message ^^him ^^with ^^any ^^questions, ^^comments, ^^or ^^concerns ^^you ^^may ^^have.')
 
 		finally: 
 			print "Comment #" + str(commentIndex) + ": Replied to a comment for date " + datesToPost[0] + "!"
@@ -65,7 +67,8 @@ def postReplies(comment, commentIndex, linksToPost, datesToPost):
 		for link in linksToPost:
 			commentString += '\n\n[' + datesToPost[index] + ']' + '(' + link + ')'
 			index += 1
-
+		commentString += '\n\n^^This ^^bot ^^was ^^made ^^by ^^/u/DTKing. '
+		commentString += '^^Please ^^message ^^him ^^with ^^any ^^questions, ^^comments, ^^or ^^concerns ^^you ^^may ^^have.'
 		try:
 			comment.reply( commentString )
 
@@ -111,53 +114,63 @@ def jamBandLinker(subredditToCrawl, postLimit):
 
 	#For each comment in our list, analyze, test, and potentially post a reply to it
 	for comment in myComments:
+
 		commentIndex += 1
 		if comment.id in alreadyDone or repliedAlready(comment): #check these early to skip unnecessary regex searching
 			print "Comment #" + str(commentIndex) + ": Already replied to this, or it's my own comment."
 			continue
-
 		#We'll use these to gather any valid dates (and their corresponding links) that we need to reply to
 		datesToPost = []
 		linksToPost = []
 		
 		searchIterator = regexString.finditer(comment.body) #search will contain the found date string
-		if searchIterator is not None:
-			for search in searchIterator: #check for a date-like string that's new
+
+		badRequestAlready = False #to ensure the bad HTTP request message is only printed once per comment
+		emptyIterator = True #to check if the iterator was empty or not
+		
+		for search in searchIterator: #check for a date-like string that's new
+			emptyIterator = False #toggle this to signal that the iterator wasn't empty
+			
+			toAppend = re.split('[-./]', search.group()) #split the search results into distinct indices
+
+			#Make the indices returned by our regex split nice to use
+			year = toAppend[2]
+			month = toAppend[0]
+			day = toAppend[1]
+
+			#Fix string lengths for use in url creation
+			if month[0] == '0': #need to remove the 0 from the month
+				month = month.lstrip('0')
+
+			if day[0] == '0': #do the same for the days
+				day = day.lstrip('0')
+
+			if len(year) == 2: #need to prepend '19' to the years
+				year = '19' + year		
+
+			#Check if the band actually played this date via making a request to the streaming service
+			if not isHttpValid(day, month, year):
 				
-				toAppend = re.split('[-./]', search.group()) #split the search results into distinct indices
+				if not badRequestAlready:
+					print "Comment #" + str(commentIndex) + ": Bad HTTP request(s)."
+				badRequestAlready = True #toggle this so the diagnostic message only gets printed once
+				continue
 
-				#Make the indices returned by our regex split nice to use
-				year = toAppend[2]
-				month = toAppend[0]
-				day = toAppend[1]
+			urlString = 'http://www.relisten.net/grateful-dead/' + year + '/' + month + '/' + day
+			if urlString in linksToPost:
+				continue
+				
+			linksToPost.append(urlString) #add this string into our list of links to post
+			datesToPost.append(search.group())
 
-				#Fix string lengths for use in url creation
-				if month[0] == '0': #need to remove the 0 from the month
-					month = month.lstrip('0')
-
-				if day[0] == '0': #do the same for the days
-					day = day.lstrip('0')
-
-				if len(year) == 2: #need to prepend '19' to the years
-					year = '19' + year		
-
-				#Check if the band actually played this date via making a request to the streaming service
-				if not isHttpValid(day, month, year):
-					print "Comment #" + str(commentIndex) + ": Bad HTTP request."
-					continue
-
-				urlString = 'http://www.relisten.net/grateful-dead/' + year + '/' + month + '/' + day
-				linksToPost.append(urlString) #add this string into our list of links to post
-				datesToPost.append(search.group())
-
-		elif searchIterator is None:
+		if emptyIterator: #if the iterator was empty
 			print "Comment #" + str(commentIndex) + ": No dates in this comment."
 		
-		elif comment.id in alreadyDone:
+		"""elif comment.id in alreadyDone and not badRequestAlready:
 			print "Comment #" + str(commentIndex) + ": Comment already in reviewed collection."
 		
-		else:
-			print "Comment #" + str(commentIndex) + ": Not sure what happened here." 
+		else if not badRequestAlready:
+			print "Comment #" + str(commentIndex) + ": Not sure what happened here." """
 
 		postCounter += postReplies(comment, commentIndex, linksToPost, datesToPost) #make posts!
 

@@ -109,7 +109,7 @@ def jamBandLinker(subredditToCrawl, postLimit):
   
   print "Done gathering comments!"
   print "Number of comments parsed: " + str(len(myComments)) + '\n'
-  regexString = re.compile('\d{1,3}[-./]\d{1,2}[-./]\d{2,4}') #Look for a string that resembles a date
+  regexString = re.compile('\d{1,3}[-./]\d{1,2}[-./]\d{2,4}(?!])') #Look for a string that resembles a date, but not already a link
   commentIndex = 0
   postCounter = 0
 
@@ -188,18 +188,25 @@ def jamBandLinker(subredditToCrawl, postLimit):
 #Parse and handle command line input, call the script with correct arguments
 def main():
   postLimit = 0
+  counter = 0
   if len(sys.argv) < 2: #no command line input
     print "You need to specify a subreddit!"
+  
   elif len(sys.argv) == 2: #subreddit specified, no post limit specified. 
-    subredditToCrawl = sys.argv[1]
+    subredditToCrawl = sys.argv[1]    
     while(True):
+      counter = counter + 1
+      print "Iteration " + str(counter) + ".\n"
       jamBandLinker(subredditToCrawl, 0) #setting limit to 0 will use the account's default (25 for unauthenticated users)
       print "\nSleeping for 15 minutes.\n"
       time.sleep(900)
+  
   elif len(sys.argv) >= 3: #a subreddit and post limit was specified
     subredditToCrawl = sys.argv[1]
     postLimit = sys.argv[2]
     while(True):
+      counter = counter + 1
+      print "Iteration " + str(counter) + ".\n"
       jamBandLinker(subredditToCrawl, postLimit) #run the script!
       print "\nSleeping for 15 minutes.\n"
       time.sleep(900)

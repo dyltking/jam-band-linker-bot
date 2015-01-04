@@ -109,7 +109,7 @@ def jamBandLinker(subredditToCrawl, postLimit):
   
   print "Done gathering comments!"
   print "Number of comments parsed: " + str(len(myComments)) + '\n'
-  regexString = re.compile('\d{1,3}[-./]\d{1,2}[-./]\d{2,4}(?!])') #Look for a string that resembles a date, but not already a link
+  regexString = re.compile('\[?\s*\d{1,3}[-./]\d{1,2}[-./]\d{2,4}(?!])') #Look for a string that resembles a date, but not already a link
   commentIndex = 0
   postCounter = 0
 
@@ -132,6 +132,7 @@ def jamBandLinker(subredditToCrawl, postLimit):
     for search in searchIterator: #check for a date-like string that's new
       emptyIterator = False #toggle this to signal that the iterator wasn't empty
       
+
       toAppend = re.split('[-./]', search.group()) #split the search results into distinct indices
 
       #Make the indices returned by our regex split nice to use
@@ -140,8 +141,11 @@ def jamBandLinker(subredditToCrawl, postLimit):
       day = toAppend[1]
 
       #Fix string lengths for use in url creation
-      if month[0] == '0': #need to remove the 0 from the month
-        month = month.lstrip('0')
+      if month[0] == '[': #the OP of this comment probably already linked something here, so we want to continue
+        continue
+
+      if month[0] == '0': #need to remove the 0 from the month, and any potential spaces gathered
+        month = month.lstrip('0 ')
 
       if day[0] == '0': #do the same for the days
         day = day.lstrip('0')

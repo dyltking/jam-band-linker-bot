@@ -128,6 +128,7 @@ def jamBandLinker(subredditToCrawl, postLimit):
 
     badRequestAlready = False #to ensure the bad HTTP request message is only printed once per comment
     emptyIterator = True #to check if the iterator was empty or not
+    alreadyLinked = False #to ensure the OP already linked message is only printed once per comment
     
     for search in searchIterator: #check for a date-like string that's new
       emptyIterator = False #toggle this to signal that the iterator wasn't empty
@@ -139,13 +140,17 @@ def jamBandLinker(subredditToCrawl, postLimit):
       year = toAppend[2]
       month = toAppend[0]
       day = toAppend[1]
-
+      
       #Fix string lengths for use in url creation
       if month[0] == '[': #the OP of this comment probably already linked something here, so we want to continue
+        if not alreadyLinked: 
+          print "Comment #" + str(commentIndex) + ": OP already linked one or more dates." #post a diagnostic message
+        alreadyLinked = True #toggle this so this diagnostic message is only printed once per comment
         continue
 
-      if month[0] == '0': #need to remove the 0 from the month, and any potential spaces gathered
-        month = month.lstrip('0 ')
+      #if month[0] == '0': 
+      #need to remove the 0 from the month, and any potential spaces gathered
+      month = month.lstrip("0 ")
 
       if day[0] == '0': #do the same for the days
         day = day.lstrip('0')
@@ -155,10 +160,9 @@ def jamBandLinker(subredditToCrawl, postLimit):
 
       #Check if the band actually played this date via making a request to the streaming service
       if not isHttpValid(day, month, year):
-        
         if not badRequestAlready:
           print "Comment #" + str(commentIndex) + ": Bad HTTP request(s)."
-        badRequestAlready = True #toggle this so the diagnostic message only gets printed once
+        badRequestAlready = True #toggle this so this diagnostic message only gets printed once per comment
         continue
 
       urlString = 'http://www.relisten.net/grateful-dead/' + year + '/' + month + '/' + day
@@ -185,23 +189,30 @@ def jamBandLinker(subredditToCrawl, postLimit):
   elif postCounter > 1:
     print "Posted " + str(postCounter) + " new comments!"
   
-  print "Finished execution of script!" 
-
-
-
+  print "Finished execution of script!"
+  return postCounter #return however many posts made on this iteration
+  
+  
 #Parse and handle command line input, call the script with correct arguments
 def main():
   postLimit = 0
-  counter = 0
+  iterCounter = 0
+  postCounter = 0
   if len(sys.argv) < 2: #no command line input
     print "You need to specify a subreddit!"
   
   elif len(sys.argv) == 2: #subreddit specified, no post limit specified. 
     subredditToCrawl = sys.argv[1]    
     while(True):
-      counter = counter + 1
-      print "Iteration " + str(counter) + ".\n"
-      jamBandLinker(subredditToCrawl, 0) #setting limit to 0 will use the account's default (25 for unauthenticated users)
+      iterCounter = iterCounter + 1
+      
+      try:
+        postCounter = postCounter + jamBandLinker(subredditToCrawl, 0) #setting limit to 0 will use the account's default 
+      except Exception:
+        print "Exception caught."
+        
+      print "\nIteration " + str(iterCounter) + " finished."
+      print "Total posts made: " + str(postCounter) + "."
       print "\nSleeping for 15 minutes.\n"
       time.sleep(900)
   
@@ -209,9 +220,15 @@ def main():
     subredditToCrawl = sys.argv[1]
     postLimit = sys.argv[2]
     while(True):
-      counter = counter + 1
-      print "Iteration " + str(counter) + ".\n"
-      jamBandLinker(subredditToCrawl, postLimit) #run the script!
+      iterCounter = iterCounter + 1
+
+      try:
+        jamBandLinker(subredditToCrawl, postLimit) #run the script!
+      except Exception:
+        print "Exception caught."
+        
+      print "\nIteration " + str(iterCounter) + " finished."
+      print "Total posts made: " + str(postCounter) + "."
       print "\nSleeping for 15 minutes.\n"
       time.sleep(900)
 

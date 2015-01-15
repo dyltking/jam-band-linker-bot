@@ -165,7 +165,8 @@ def jamBandLinker(subredditToCrawl, postLimit):
         badRequestAlready = True #toggle this so this diagnostic message only gets printed once per comment
         continue
 
-      urlString = 'http://relisten.net/grateful-dead/' + year + '/' + month + '/' + day
+      urlString = 'http://www.relisten.net/grateful-dead/' + year + '/' + month + '/' + day
+
       if urlString in linksToPost:
         continue
         

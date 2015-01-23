@@ -148,9 +148,8 @@ def jamBandLinker(subredditToCrawl, postLimit):
         alreadyLinked = True #toggle this so this diagnostic message is only printed once per comment
         continue
 
-      #if month[0] == '0': 
-      #need to remove the 0 from the month, and any potential spaces gathered
-      month = month.lstrip("0 ")
+      #need to remove the 0 from the month, and any potential spaces or newlines gathered
+      month = month.lstrip("\n0 ")
 
       if day[0] == '0': #do the same for the days
         day = day.lstrip('0')
@@ -171,7 +170,7 @@ def jamBandLinker(subredditToCrawl, postLimit):
         continue
         
       linksToPost.append(urlString) #add this string into our list of links to post
-      datesToPost.append(search.group())
+      datesToPost.append(search.group().strip())
 
     if emptyIterator: #if the iterator was empty
       print "Comment #" + str(commentIndex) + ": No dates in this comment."
